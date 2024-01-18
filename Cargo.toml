@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "srt_cli",
+]
+
+resolver = "2"

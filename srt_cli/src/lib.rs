@@ -20,7 +20,7 @@ struct Args {
 }
 
 extern "C" {
-    pub fn spiff_process_start(ctx: &SRTContext);
+    pub fn spiff_process_start(ctx: &SRTContext) -> i32;
 }
 
 #[cfg(not(test))]
@@ -35,11 +35,7 @@ pub extern "C" fn main() -> i32 {
 
     let ctx = SRTContext { log_level };
 
-    unsafe {
-        spiff_process_start(&ctx);
-    }
-
-    0
+    unsafe { spiff_process_start(&ctx) }
 }
 
 #[no_mangle]

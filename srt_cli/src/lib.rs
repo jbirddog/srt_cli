@@ -1,5 +1,7 @@
 use std::io;
 use std::io::IsTerminal as _;
+use std::slice::from_raw_parts;
+use std::str::from_utf8;
 
 use clap::Parser;
 
@@ -53,7 +55,11 @@ pub extern "C" fn srt_will_run_element(
     let process_id = unsafe { as_str(process_id, process_id_len) };
     let element_id = unsafe { as_str(element_id, element_id_len) };
 
-    println!("will run {}_{}", process_id, element_id);
+    match (process_id, element_id) {
+        (None, _) => eprintln!("Invalid string passed as `process_id`"),
+        (_, None) => eprintln!("Invalid string passed as `element_id`"),
+        (Some(process_id), Some(element_id)) => println!("will run {}_{}", process_id, element_id),
+    }
 }
 
 #[no_mangle]
@@ -71,7 +77,11 @@ pub extern "C" fn srt_did_run_element(
     let process_id = unsafe { as_str(process_id, process_id_len) };
     let element_id = unsafe { as_str(element_id, element_id_len) };
 
-    println!("did run {}_{}", process_id, element_id);
+    match (process_id, element_id) {
+        (None, _) => eprintln!("Invalid string passed as `process_id`"),
+        (_, None) => eprintln!("Invalid string passed as `element_id`"),
+        (Some(process_id), Some(element_id)) => println!("did run {}_{}", process_id, element_id),
+    }
 }
 
 #[no_mangle]
@@ -84,27 +94,31 @@ pub extern "C" fn srt_handle_manual_task(
 ) {
     let element_id = unsafe { as_str(element_id, element_id_len) };
 
-    println!("Manual Task {}", element_id);
-
-    if instructions_len > 0 {
-        let instructions = unsafe { as_str(instructions, instructions_len) };
-
-        println!("  * {}", instructions);
+    if let Some(element_id) = element_id {
+        println!("Manual Task {}", element_id);
+    } else {
+        eprintln!("Invalid string passed as `element_id`");
     }
 
-    if io::stdout().is_terminal() {
+    if instructions_len > 0 {
+        if let Some(instructions) = unsafe { as_str(instructions, instructions_len) } {
+            println!("  * {}", instructions);
+        } else {
+            eprintln!("Invalid string passed as `instructions`");
+        }
+    }
+
+    if io::stdin().is_terminal() {
         println!("\nPress enter to continue:");
-	let mut input = String::new();
-	let _ = io::stdin().read_line(&mut input);
+        let mut input = String::new();
+        let _ = io::stdin().read_line(&mut input);
     } else {
         println!("\nNot in interactive mode, automatically completing manual task...");
     }
 }
 
-unsafe fn as_str(data: *const u8, len: usize) -> &'static str {
-    if let Ok(str) = std::str::from_utf8(std::slice::from_raw_parts(data, len)) {
-        return str;
-    }
-
-    panic!("Invalid string");
+unsafe fn as_str(data: *const u8, len: usize) -> Option<&'static str> {
+    data.as_ref()
+        .map(|d| from_utf8(from_raw_parts(d, len)).ok())
+        .flatten()
 }

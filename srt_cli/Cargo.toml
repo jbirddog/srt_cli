@@ -1,0 +1,13 @@
+[package]
+name = "srt_cli"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "srt_cli"
+crate-type = ["staticlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.4.18", features = ["derive"] }

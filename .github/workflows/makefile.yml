@@ -22,3 +22,6 @@ jobs:
 
     - name: Test
       run: make tests
+
+    - name: Check fmt and clippy
+      run: make check

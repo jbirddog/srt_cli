@@ -25,6 +25,15 @@ fmt:
 clippy:
 	$(IN_DEV) cargo clippy
 
+fmt-check:
+	$(IN_DEV) cargo fmt --check
+
+clippy-check:
+	$(IN_DEV) cargo clippy -- -D warnings
+
+check: fmt-check clippy-check
+	@/bin/true
+
 sh:
 	$(IN_IDEV) /bin/bash
 
@@ -34,7 +43,7 @@ take-ownership:
 check-ownership:
 	find . ! -user $(MY_USER) ! -group $(MY_GROUP)
 
-.PHONY: dev-env tests fmt clippy \
+.PHONY: dev-env tests fmt fmt-check clippy clippy-check check \
 	sh \
 	take-ownership check-ownership \
 	compile

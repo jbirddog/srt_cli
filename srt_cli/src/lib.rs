@@ -20,7 +20,7 @@ struct Args {
 }
 
 extern "C" {
-    pub fn spiff_process_start(ctx: &SRTContext);
+    pub fn spiff_process_start(ctx: &SRTContext) -> i32;
 }
 
 #[cfg(not(test))]
@@ -35,15 +35,14 @@ pub extern "C" fn main() -> i32 {
 
     let ctx = SRTContext { log_level };
 
-    unsafe {
-        spiff_process_start(&ctx);
-    }
-
-    0
+    unsafe { spiff_process_start(&ctx) }
 }
 
+/// # Safety
+///
+/// This function expects the caller to provide valid strings and lengths.
 #[no_mangle]
-pub extern "C" fn srt_will_run_element(
+pub unsafe extern "C" fn srt_will_run_element(
     ctx: &SRTContext,
     process_id: *const u8,
     process_id_len: usize,
@@ -64,8 +63,11 @@ pub extern "C" fn srt_will_run_element(
     }
 }
 
+/// # Safety
+///
+/// This function expects the caller to provide valid strings and lengths.
 #[no_mangle]
-pub extern "C" fn srt_did_run_element(
+pub unsafe extern "C" fn srt_did_run_element(
     ctx: &SRTContext,
     process_id: *const u8,
     process_id_len: usize,
@@ -86,8 +88,11 @@ pub extern "C" fn srt_did_run_element(
     }
 }
 
+/// # Safety
+///
+/// This function expects the caller to provide valid strings and lengths.
 #[no_mangle]
-pub extern "C" fn srt_handle_manual_task(
+pub unsafe extern "C" fn srt_handle_manual_task(
     _ctx: &SRTContext,
     element_id: *const u8,
     element_id_len: usize,
@@ -121,6 +126,5 @@ pub extern "C" fn srt_handle_manual_task(
 
 unsafe fn as_str(data: *const u8, len: usize) -> Option<&'static str> {
     data.as_ref()
-        .map(|d| from_utf8(from_raw_parts(d, len)).ok())
-        .flatten()
+        .and_then(|d| from_utf8(from_raw_parts(d, len)).ok())
 }

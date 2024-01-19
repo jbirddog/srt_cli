@@ -25,7 +25,7 @@ extern "C" {
 
 #[cfg(not(test))]
 #[no_mangle]
-pub extern "C" fn main() {
+pub extern "C" fn main() -> i32 {
     let args = Args::parse();
     let log_level = if args.verbose {
         SRT_LOG_LEVEL_VERBOSE
@@ -38,6 +38,8 @@ pub extern "C" fn main() {
     unsafe {
         spiff_process_start(&ctx);
     }
+
+    0
 }
 
 #[no_mangle]

@@ -8,9 +8,8 @@ pub struct State {
 }
 
 impl State {
-    pub fn set_i64(&mut self, key: &str, value: i64) -> bool {
-        let value = Value::from(value);
-
-        self.state.insert(key.to_string(), value).is_some()
+    pub fn set_i64(&mut self, key: &str, value: i64) {
+        self.state.insert(key.to_string(), Value::from(value));
     }
+}
 }

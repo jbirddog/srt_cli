@@ -12,4 +12,3 @@ impl State {
         self.state.insert(key.to_string(), Value::from(value));
     }
 }
-}

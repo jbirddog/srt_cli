@@ -13,6 +13,8 @@ use context::Context;
 
 const SUCCESS: i32 = 0;
 const INVALID_STRING: i32 = 1;
+const UNKNOWN_TASK_DATA_KEY: i32 = 2;
+const INVALID_POINTER: i32 = 3;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -138,6 +140,36 @@ pub unsafe extern "C" fn srt_task_data_set_int64(
     ctx.task_data.set_i64(key, value);
 
     log::trace!("Set task_data var '{}: i64 = {}'", key, value);
+
+    SUCCESS
+}
+
+/// # Safety
+///
+/// This function expects the caller to provide valid strings and lengths.
+#[no_mangle]
+pub unsafe extern "C" fn srt_task_data_get_int64(
+    ctx: *mut c_void,
+    key: *const u8,
+    key_len: usize,
+    value: *mut i64,
+) -> i32 {
+    let ctx: &mut Context = unsafe { &mut *(ctx as *mut Context) };
+    let key = as_valid_str!(key, key_len);
+
+    if value.as_ref().is_none() {
+        log::error!("Invalid pointer provided for 'value'");
+        return INVALID_POINTER;
+    }
+
+    let Some(task_data_value) = ctx.task_data.get_i64(key) else {
+        log::error!("No i64 task data value for key '{}'", key);
+        return UNKNOWN_TASK_DATA_KEY;
+    };
+
+    *value = task_data_value;
+
+    log::trace!("Get task_data var '{}: i64 = {}'", key, *value);
 
     SUCCESS
 }

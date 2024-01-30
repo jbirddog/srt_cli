@@ -15,4 +15,8 @@ impl State {
     pub fn set_i64(&mut self, key: &str, value: i64) {
         self.state.insert(key.to_string(), Value::from(value));
     }
+
+    pub fn delete(&mut self, key: &str) -> Option<Value> {
+        self.state.remove(key)
+    }
 }

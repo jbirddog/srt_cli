@@ -174,7 +174,111 @@ pub unsafe extern "C" fn srt_task_data_get_int64(
     SUCCESS
 }
 
+/// # Safety
+///
+/// This function expects the caller to provide valid strings and lengths.
+#[no_mangle]
+pub unsafe extern "C" fn srt_task_data_delete(
+    ctx: *mut c_void,
+    key: *const u8,
+    key_len: usize,
+) -> i32 {
+    let ctx: &mut Context = unsafe { &mut *(ctx as *mut Context) };
+    let key = as_valid_str!(key, key_len);
+
+    if ctx.task_data.delete(key).is_none() {
+        log::error!("No task data value to delete for key '{}'", key);
+        return UNKNOWN_TASK_DATA_KEY;
+    };
+
+    log::trace!("Delete task_data var '{}'", key);
+
+    SUCCESS
+}
+
 unsafe fn as_str(data: *const u8, len: usize) -> Option<&'static str> {
     data.as_ref()
         .and_then(|d| from_utf8(from_raw_parts(d, len)).ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_get_task_data_int64() {
+        let mut ctx = Context::default();
+        let key = "some_var";
+        let key_len = key.len();
+        let key = key.as_bytes().as_ptr() as *const u8;
+        let expected = 77;
+
+        let result = unsafe {
+            srt_task_data_set_int64(&mut ctx as *mut _ as *mut c_void, key, key_len, expected)
+        };
+
+        assert_eq!(result, SUCCESS);
+
+        let mut value: i64 = 0;
+        let result = unsafe {
+            srt_task_data_get_int64(&mut ctx as *mut _ as *mut c_void, key, key_len, &mut value)
+        };
+
+        assert_eq!(result, SUCCESS);
+        assert_eq!(value, expected);
+    }
+
+    #[test]
+    fn set_delete_task_data_int64() {
+        let mut ctx = Context::default();
+        let key = "some_var";
+        let key_len = key.len();
+        let key = key.as_bytes().as_ptr() as *const u8;
+
+        let result =
+            unsafe { srt_task_data_set_int64(&mut ctx as *mut _ as *mut c_void, key, key_len, 55) };
+
+        assert_eq!(result, SUCCESS);
+
+        let result =
+            unsafe { srt_task_data_delete(&mut ctx as *mut _ as *mut c_void, key, key_len) };
+
+        assert_eq!(result, SUCCESS);
+
+        let mut value: i64 = 0;
+        let result = unsafe {
+            srt_task_data_get_int64(&mut ctx as *mut _ as *mut c_void, key, key_len, &mut value)
+        };
+
+        assert_eq!(result, UNKNOWN_TASK_DATA_KEY);
+    }
+
+    #[test]
+    fn get_unset_task_data_int64() {
+        let mut ctx = Context::default();
+        let key = "some_var";
+        let key_len = key.len();
+        let key = key.as_bytes().as_ptr() as *const u8;
+
+        let mut value: i64 = 300;
+        let result = unsafe {
+            srt_task_data_get_int64(&mut ctx as *mut _ as *mut c_void, key, key_len, &mut value)
+        };
+
+        assert_eq!(result, UNKNOWN_TASK_DATA_KEY);
+        assert_eq!(value, 300);
+    }
+
+    #[test]
+    fn delete_unset_task_data_int64() {
+        let mut ctx = Context::default();
+        let key = "some_var";
+        let key_len = key.len();
+        let key = key.as_bytes().as_ptr() as *const u8;
+
+        let result =
+            unsafe { srt_task_data_delete(&mut ctx as *mut _ as *mut c_void, key, key_len) };
+
+        assert_eq!(result, UNKNOWN_TASK_DATA_KEY);
+    }
 }

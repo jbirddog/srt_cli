@@ -1,11 +1,16 @@
-FROM rust:slim
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y \
+       clang-format \
+       gcc \
+       make \
+       ninja-build \
+       valgrind \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY ./ ./
 
-RUN rustup component add rustfmt clippy
-
-RUN \
-    --mount=type=cache,target=/var/cache/cargo \
-    cargo build
+RUN ninja

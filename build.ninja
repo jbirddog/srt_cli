@@ -1,0 +1,26 @@
+bd = build
+sd = src
+
+rule cc
+  depfile = $out.d
+  command = cc -std=c2x -Wall -Wpedantic -MD -MF $out.d -o $out -c $in
+
+rule lib
+  command = ar rcs $out $in
+
+rule link
+  command = cc -o $out $in
+
+build ${bd}/ctx.o: cc ${sd}/ctx.c
+build ${bd}/dict.o: cc ${sd}/dict.c
+build ${bd}/life_cycle.o: cc ${sd}/life_cycle.c
+build ${bd}/main.o: cc ${sd}/main.c
+build ${bd}/manual_task.o: cc ${sd}/manual_task.c
+build ${bd}/task_data.o: cc ${sd}/task_data.c
+build ${bd}/test_harness.o: cc ${sd}/test_harness.c
+build ${bd}/value.o: cc ${sd}/value.c
+
+build ${bd}/libsrt_cli.a: lib ${bd}/ctx.o ${bd}/dict.o ${bd}/life_cycle.o ${bd}/main.o ${bd}/manual_task.o ${bd}/task_data.o ${bd}/value.o
+build ${bd}/test_harness: link ${bd}/test_harness.o ${bd}/libsrt_cli.a
+
+default ${bd}/test_harness

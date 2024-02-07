@@ -3,7 +3,7 @@
 typedef struct srt_value {
   enum { SRT_INT64 } tag;
   union {
-    int64_t i64;
+    int64_t int64;
   };
 } srt_value;
 

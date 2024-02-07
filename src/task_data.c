@@ -16,7 +16,7 @@ int32_t srt_task_data_set_int64(const srt_context *ctx, const char *key,
   }
 
   v->tag = SRT_INT64;
-  v->i64 = value;
+  v->int64 = value;
 
   if (srt_dict_set(ctx->task_data, key, v)) {
     if (ctx->verbose) {
@@ -41,7 +41,7 @@ int32_t srt_task_data_get_int64(const srt_context *ctx, const char *key,
     return SRT_KEY_TYPE_MISMATCH;
   }
 
-  *value = v->i64;
+  *value = v->int64;
 
   if (ctx->verbose) {
     printf("get task_data var '%s: int64 = %ld'\n", key, *value);

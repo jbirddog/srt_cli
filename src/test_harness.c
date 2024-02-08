@@ -45,61 +45,69 @@ static void test_task_data() {
   START_TESTS;
 
   TEST_WITH_CTX("returns unknown key when getting unset int64", {
-    const int32_t result = srt_task_data_get_int64(ctx, "x", NULL);
+    const int32_t result = srt_task_data_try_get_int64(ctx, "x", NULL);
     assert(result == SRT_UNKNOWN_KEY);
   });
 
   TEST_WITH_CTX("can set and get int64", {
     {
-      const int32_t result = srt_task_data_set_int64(ctx, "x", 11);
+      const int32_t result = srt_task_data_try_set_int64(ctx, "x", 11);
       assert(result == SRT_SUCCESS);
     }
 
     int64_t value;
-    const int32_t result = srt_task_data_get_int64(ctx, "x", &value);
+    const int32_t result = srt_task_data_try_get_int64(ctx, "x", &value);
     assert(result == SRT_SUCCESS);
     assert(value == 11);
   });
 
   TEST_WITH_CTX("can reset and get int64", {
     {
-      const int32_t result = srt_task_data_set_int64(ctx, "x", 11);
+      const int32_t result = srt_task_data_try_set_int64(ctx, "x", 11);
       assert(result == SRT_SUCCESS);
     }
 
     {
-      const int32_t result = srt_task_data_set_int64(ctx, "x", 22);
+      const int32_t result = srt_task_data_try_set_int64(ctx, "x", 22);
       assert(result == SRT_SUCCESS);
     }
 
     int64_t value;
-    const int32_t result = srt_task_data_get_int64(ctx, "x", &value);
+    const int32_t result = srt_task_data_try_get_int64(ctx, "x", &value);
     assert(result == SRT_SUCCESS);
     assert(value == 22);
   });
 
   TEST_WITH_CTX("can set and get different int64", {
-    const int32_t result_x = srt_task_data_set_int64(ctx, "x", 11);
+    const int32_t result_x = srt_task_data_try_set_int64(ctx, "x", 11);
     assert(result_x == SRT_SUCCESS);
 
-    const int32_t result_y = srt_task_data_set_int64(ctx, "y", 22);
+    const int32_t result_y = srt_task_data_try_set_int64(ctx, "y", 22);
     assert(result_y == SRT_SUCCESS);
 
     int64_t value_x;
-    const int32_t result_x2 = srt_task_data_get_int64(ctx, "x", &value_x);
+    const int32_t result_x2 = srt_task_data_try_get_int64(ctx, "x", &value_x);
     assert(result_x2 == SRT_SUCCESS);
     assert(value_x == 11);
 
     int64_t value_y;
-    const int32_t result_y2 = srt_task_data_get_int64(ctx, "y", &value_y);
+    const int32_t result_y2 = srt_task_data_try_get_int64(ctx, "y", &value_y);
     assert(result_y2 == SRT_SUCCESS);
     assert(value_y == 22);
   });
 
   TEST_WITH_CTX("can delete", {
-    assert(srt_task_data_set_int64(ctx, "x", 11) == SRT_SUCCESS);
-    assert(srt_task_data_delete(ctx, "x") == SRT_SUCCESS);
-    assert(srt_task_data_get_int64(ctx, "x", NULL) == SRT_UNKNOWN_KEY);
+    assert(srt_task_data_try_set_int64(ctx, "x", 11) == SRT_SUCCESS);
+    assert(srt_task_data_try_delete(ctx, "x") == SRT_SUCCESS);
+    assert(srt_task_data_try_get_int64(ctx, "x", NULL) == SRT_UNKNOWN_KEY);
+  });
+
+  TEST_WITH_CTX("can happy path without panic", {
+    srt_task_data_set_int64(ctx, "x", 11);
+    assert(srt_task_data_get_int64(ctx, "x") == 11);
+    srt_task_data_delete(ctx, "x");
+    srt_task_data_set_int64(ctx, "x", 13);
+    assert(srt_task_data_get_int64(ctx, "x") == 13);
   });
 
   END_TESTS;

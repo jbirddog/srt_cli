@@ -7,8 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-int32_t srt_task_data_set_int64(const srt_context *ctx, const char *key,
-                                int64_t value) {
+#define PANIC_UNLESS(a, e, s)                                                  \
+  if (a != e) {                                                                \
+    fprintf(stderr, "Panic in %s: " s "\n", __func__);                         \
+    exit(a);                                                                   \
+  }
+
+int32_t srt_task_data_try_set_int64(const srt_context *ctx, const char *key,
+                                    int64_t value) {
   srt_value *v = calloc(1, sizeof(*v));
 
   if (!v) {
@@ -29,8 +35,15 @@ int32_t srt_task_data_set_int64(const srt_context *ctx, const char *key,
   return SRT_UNKNOWN_ERROR;
 }
 
-int32_t srt_task_data_get_int64(const srt_context *ctx, const char *key,
-                                int64_t *value) {
+void srt_task_data_set_int64(const srt_context *ctx, const char *key,
+                             int64_t value) {
+  const int32_t result = srt_task_data_try_set_int64(ctx, key, value);
+
+  PANIC_UNLESS(result, SRT_SUCCESS, "failed to set task data var");
+}
+
+int32_t srt_task_data_try_get_int64(const srt_context *ctx, const char *key,
+                                    int64_t *value) {
   const srt_value *v = srt_dict_get(ctx->task_data, key);
 
   if (!v) {
@@ -50,7 +63,16 @@ int32_t srt_task_data_get_int64(const srt_context *ctx, const char *key,
   return SRT_SUCCESS;
 }
 
-int32_t srt_task_data_delete(const srt_context *ctx, const char *key) {
+int64_t srt_task_data_get_int64(const srt_context *ctx, const char *key) {
+  int64_t value;
+  const int32_t result = srt_task_data_try_get_int64(ctx, key, &value);
+
+  PANIC_UNLESS(result, SRT_SUCCESS, "failed to get task data var");
+
+  return value;
+}
+
+int32_t srt_task_data_try_delete(const srt_context *ctx, const char *key) {
   if (srt_dict_delete(ctx->task_data, key)) {
     if (ctx->verbose) {
       printf("delete task_data var '%s'\n", key);
@@ -60,4 +82,10 @@ int32_t srt_task_data_delete(const srt_context *ctx, const char *key) {
   }
 
   return SRT_UNKNOWN_KEY;
+}
+
+void srt_task_data_delete(const srt_context *ctx, const char *key) {
+  const int32_t result = srt_task_data_try_delete(ctx, key);
+
+  PANIC_UNLESS(result, SRT_SUCCESS, "failed to delete task data var");
 }

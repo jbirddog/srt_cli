@@ -54,10 +54,25 @@ int32_t srt_handle_manual_task(const srt_context *ctx, const char *element_id,
  *
  */
 
-int32_t srt_task_data_set_int64(const srt_context *ctx, const char *key,
-                                int64_t value);
+//
+// these flavors attempt the operation and return an error code if unsuccessful.
+//
 
-int32_t srt_task_data_get_int64(const srt_context *ctx, const char *key,
-                                int64_t *value);
+int32_t srt_task_data_try_set_int64(const srt_context *ctx, const char *key,
+                                    int64_t value);
 
-int32_t srt_task_data_delete(const srt_context *ctx, const char *key);
+int32_t srt_task_data_try_get_int64(const srt_context *ctx, const char *key,
+                                    int64_t *value);
+
+int32_t srt_task_data_try_delete(const srt_context *ctx, const char *key);
+
+//
+// these flavors attempt the operation and panic if unsuccessful.
+//
+
+void srt_task_data_set_int64(const srt_context *ctx, const char *key,
+                             int64_t value);
+
+int64_t srt_task_data_get_int64(const srt_context *ctx, const char *key);
+
+void srt_task_data_delete(const srt_context *ctx, const char *key);

@@ -41,12 +41,65 @@ static void test_ctx() {
   END_TESTS;
 }
 
+static void test_dict() {
+  START_TESTS;
+
+  TEST("can new and free", {
+    srt_dict *d = srt_dict_new(2);
+    srt_dict_free(d);
+  });
+
+  TEST("can new with kvs and free", {
+    srt_dict *d = srt_dict_new_with_kvs(3, "key1", srt_value_new_bool(true),
+                                        "key2", srt_value_new_int64(13), "key3",
+                                        srt_value_new_bool(false));
+    assert(srt_dict_len(d) == 3);
+    srt_dict_free(d);
+  });
+
+  END_TESTS;
+}
+
 static void test_task_data() {
   START_TESTS;
+
+  TEST_WITH_CTX("returns unknown key when getting unset bool", {
+    const int32_t result = srt_task_data_try_get_bool(ctx, "x", NULL);
+    assert(result == SRT_UNKNOWN_KEY);
+  });
 
   TEST_WITH_CTX("returns unknown key when getting unset int64", {
     const int32_t result = srt_task_data_try_get_int64(ctx, "x", NULL);
     assert(result == SRT_UNKNOWN_KEY);
+  });
+
+  TEST_WITH_CTX("can set and get bool", {
+    {
+      const int32_t result = srt_task_data_try_set_bool(ctx, "x", true);
+      assert(result == SRT_SUCCESS);
+    }
+
+    bool value;
+    const int32_t result = srt_task_data_try_get_bool(ctx, "x", &value);
+    assert(result == SRT_SUCCESS);
+    assert(value == true);
+  });
+
+  TEST_WITH_CTX("can set and get dict", {
+    srt_dict *d = srt_dict_new(2);
+    assert(d != NULL);
+
+    {
+      const int32_t result = srt_task_data_try_set_dict(ctx, "x", d);
+      assert(result == SRT_SUCCESS);
+    }
+
+    srt_dict *value;
+    const int32_t result = srt_task_data_try_get_dict(ctx, "x", &value);
+    assert(result == SRT_SUCCESS);
+    assert(value == d);
+
+    srt_dict_free(d);
   });
 
   TEST_WITH_CTX("can set and get int64", {
@@ -96,6 +149,17 @@ static void test_task_data() {
     assert(value_y == 22);
   });
 
+  TEST_WITH_CTX("can get a type mismatch", {
+    {
+      const int32_t result = srt_task_data_try_set_bool(ctx, "x", true);
+      assert(result == SRT_SUCCESS);
+    }
+
+    int64_t value;
+    const int32_t result = srt_task_data_try_get_int64(ctx, "x", &value);
+    assert(result == SRT_KEY_TYPE_MISMATCH);
+  });
+
   TEST_WITH_CTX("can delete", {
     assert(srt_task_data_try_set_int64(ctx, "x", 11) == SRT_SUCCESS);
     assert(srt_task_data_try_delete(ctx, "x") == SRT_SUCCESS);
@@ -118,6 +182,7 @@ int main(int argc, char **argv) {
   printf("running tests...\n\n");
 
   test_ctx();
+  test_dict();
   test_task_data();
 
   return 0;

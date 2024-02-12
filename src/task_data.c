@@ -8,69 +8,182 @@
 #include <string.h>
 
 #define PANIC_UNLESS(a, e, s)                                                  \
-  if (a != e) {                                                                \
-    fprintf(stderr, "Panic in %s: " s "\n", __func__);                         \
+  if ((a) != (e)) {                                                            \
+    fprintf(stderr, "Panic in %s: " s " '%s'\n", __func__, key);               \
     exit(a);                                                                   \
   }
 
-int32_t srt_task_data_try_set_int64(const srt_context *ctx, const char *key,
-                                    int64_t value) {
-  srt_value *v = calloc(1, sizeof(*v));
+#define GET_PANIC_UNLESS(a)                                                    \
+  PANIC_UNLESS(a, SRT_SUCCESS, "failed to get task data var")
 
-  if (!v) {
-    return SRT_UNKNOWN_ERROR;
+#define SET_PANIC_UNLESS(a)                                                    \
+  PANIC_UNLESS(a, SRT_SUCCESS, "failed to set task data var")
+
+#define LOG_K(m, k)                                                            \
+  if (ctx->verbose) {                                                          \
+    printf(m " '%s'\n", k);                                                    \
   }
 
-  v->tag = SRT_INT64;
-  v->int64 = value;
+#define LOG_KV(m, k, v)                                                        \
+  if (ctx->verbose) {                                                          \
+    printf(m " '%s: ", k);                                                     \
+    srt_value_print(v);                                                        \
+    printf("'\n");                                                             \
+  }
 
-  if (srt_dict_set(ctx->task_data, key, v)) {
-    if (ctx->verbose) {
-      printf("set task_data var '%s: int64 = %ld'\n", key, value);
-    }
+static int32_t try_get_value(const srt_context *ctx, const char *key,
+                             srt_value_tag tag, srt_value **value) {
+  LOG_K("will get task_data var", key);
+
+  srt_value *v = srt_dict_get(ctx->task_data, key);
+
+  if (!v) {
+    LOG_K("unknown task_data var", key);
+
+    return SRT_UNKNOWN_KEY;
+  }
+
+  if (v->tag != tag) {
+    LOG_K("type mismatch for task_data var", key);
+
+    return SRT_KEY_TYPE_MISMATCH;
+  }
+
+  *value = v;
+
+  LOG_KV("did get task_data var", key, v);
+
+  return SRT_SUCCESS;
+}
+
+static int32_t try_set_value(const srt_context *ctx, const char *key,
+                             srt_value *value) {
+
+  LOG_KV("will set task_data var", key, value);
+
+  if (value && srt_dict_set(ctx->task_data, key, value)) {
+    LOG_KV("did set task_data var", key, value);
 
     return SRT_SUCCESS;
+  }
+
+  LOG_KV("failed to set task_data var", key, value);
+
+  if (value) {
+    srt_value_free(value);
   }
 
   return SRT_UNKNOWN_ERROR;
 }
 
-void srt_task_data_set_int64(const srt_context *ctx, const char *key,
-                             int64_t value) {
-  const int32_t result = srt_task_data_try_set_int64(ctx, key, value);
+//
+// bool
+//
 
-  PANIC_UNLESS(result, SRT_SUCCESS, "failed to set task data var");
+int32_t srt_task_data_try_get_bool(const srt_context *ctx, const char *key,
+                                   bool *value) {
+  srt_value *v;
+  const uint32_t result = try_get_value(ctx, key, SRT_BOOL, &v);
+
+  if (result == SRT_SUCCESS) {
+    *value = v->b;
+  }
+
+  return result;
 }
+
+bool srt_task_data_get_bool(const srt_context *ctx, const char *key) {
+  bool value;
+  const int32_t result = srt_task_data_try_get_bool(ctx, key, &value);
+
+  GET_PANIC_UNLESS(result);
+
+  return value;
+}
+
+int32_t srt_task_data_try_set_bool(const srt_context *ctx, const char *key,
+                                   bool value) {
+  return try_set_value(ctx, key, srt_value_new(value));
+}
+
+void srt_task_data_set_bool(const srt_context *ctx, const char *key,
+                            bool value) {
+  SET_PANIC_UNLESS(srt_task_data_try_set_bool(ctx, key, value));
+}
+
+//
+// dict
+//
+
+int32_t srt_task_data_try_get_dict(const srt_context *ctx, const char *key,
+                                   srt_dict **value) {
+  srt_value *v;
+  const uint32_t result = try_get_value(ctx, key, SRT_DICT, &v);
+
+  if (result == SRT_SUCCESS) {
+    *value = v->dict;
+  }
+
+  return result;
+}
+
+srt_dict *srt_task_data_get_dict(const srt_context *ctx, const char *key) {
+  srt_dict *value;
+  const int32_t result = srt_task_data_try_get_dict(ctx, key, &value);
+
+  GET_PANIC_UNLESS(result);
+
+  return value;
+}
+
+int32_t srt_task_data_try_set_dict(const srt_context *ctx, const char *key,
+                                   srt_dict *value) {
+  return try_set_value(ctx, key, srt_value_new(value));
+}
+
+void srt_task_data_set_dict(const srt_context *ctx, const char *key,
+                            srt_dict *value) {
+  SET_PANIC_UNLESS(srt_task_data_try_set_dict(ctx, key, value));
+}
+
+//
+// int64
+//
 
 int32_t srt_task_data_try_get_int64(const srt_context *ctx, const char *key,
                                     int64_t *value) {
-  const srt_value *v = srt_dict_get(ctx->task_data, key);
+  srt_value *v;
+  const uint32_t result = try_get_value(ctx, key, SRT_INT64, &v);
 
-  if (!v) {
-    return SRT_UNKNOWN_KEY;
+  if (result == SRT_SUCCESS) {
+    *value = v->int64;
   }
 
-  if (v->tag != SRT_INT64) {
-    return SRT_KEY_TYPE_MISMATCH;
-  }
-
-  *value = v->int64;
-
-  if (ctx->verbose) {
-    printf("get task_data var '%s: int64 = %ld'\n", key, *value);
-  }
-
-  return SRT_SUCCESS;
+  return result;
 }
 
 int64_t srt_task_data_get_int64(const srt_context *ctx, const char *key) {
   int64_t value;
   const int32_t result = srt_task_data_try_get_int64(ctx, key, &value);
 
-  PANIC_UNLESS(result, SRT_SUCCESS, "failed to get task data var");
+  GET_PANIC_UNLESS(result);
 
   return value;
 }
+
+int32_t srt_task_data_try_set_int64(const srt_context *ctx, const char *key,
+                                    int64_t value) {
+  return try_set_value(ctx, key, srt_value_new(value));
+}
+
+void srt_task_data_set_int64(const srt_context *ctx, const char *key,
+                             int64_t value) {
+  SET_PANIC_UNLESS(srt_task_data_try_set_int64(ctx, key, value));
+}
+
+//
+// delete
+//
 
 int32_t srt_task_data_try_delete(const srt_context *ctx, const char *key) {
   if (srt_dict_delete(ctx->task_data, key)) {

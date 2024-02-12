@@ -1,5 +1,6 @@
 #include "dict.h"
 #include "value.h"
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,7 +22,7 @@
     } while (1);                                                               \
   } while (0)
 
-srt_dict *srt_dict_new(size_t capacity) {
+srt_dict *srt_dict_new(const size_t capacity) {
   if (capacity == 0 || ((capacity & (capacity - 1)) != 0)) {
     return NULL;
   }
@@ -40,6 +41,43 @@ srt_dict *srt_dict_new(size_t capacity) {
   dict->cap = capacity;
   dict->mask = capacity - 1;
   dict->items = items;
+
+  return dict;
+}
+
+//
+// https://jameshfisher.com/2018/03/30/round-up-power-2/
+//
+static uint64_t next_pow2(uint64_t x) {
+  return x == 1 ? 1 : 1 << (64 - __builtin_clzl(x - 1));
+}
+
+srt_dict *srt_dict_new_with_kvs(uint64_t kv_count, const char *key1,
+                                srt_value *value1, ...) {
+  if (!kv_count) {
+    return NULL;
+  }
+
+  const uint64_t capacity = next_pow2(kv_count);
+
+  srt_dict *dict = srt_dict_new(capacity);
+  if (!dict) {
+    return NULL;
+  }
+
+  srt_dict_set(dict, key1, value1);
+
+  va_list ap;
+  va_start(ap, value1);
+
+  for (int i = 1; i < kv_count; ++i) {
+    const char *key = va_arg(ap, char *);
+    srt_value *value = va_arg(ap, srt_value *);
+
+    srt_dict_set(dict, key, value);
+  }
+
+  va_end(ap);
 
   return dict;
 }
@@ -109,17 +147,27 @@ static bool set(srt_dict_item *item, const char *key, srt_value *value) {
 bool srt_dict_set(srt_dict *dict, const char *key, srt_value *value) {
   PROBE(false, {
     if (!item->key) {
-      return set(item, key, value);
+      if (set(item, key, value)) {
+        dict->len++;
+        return true;
+      }
+
+      return false;
     }
 
     if (!item->live || strcmp(item->key, key) == 0) {
       srt_dict_item_free(item);
-      return set(item, key, value);
+      if (set(item, key, value)) {
+        dict->len++;
+        return true;
+      }
+
+      return false;
     }
   });
 }
 
-bool srt_dict_delete(const srt_dict *dict, const char *key) {
+bool srt_dict_delete(srt_dict *dict, const char *key) {
   PROBE(false, {
     if (!item->key) {
       return false;
@@ -127,7 +175,10 @@ bool srt_dict_delete(const srt_dict *dict, const char *key) {
 
     if (strcmp(item->key, key) == 0) {
       srt_dict_item_free(item);
+      dict->len--;
       return true;
     }
   });
 }
+
+size_t srt_dict_len(const srt_dict *dict) { return dict->len; }
